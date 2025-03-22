@@ -1,0 +1,4 @@
+name: Malguem
+templates:
+  nyang:
+    path: templates/nyang

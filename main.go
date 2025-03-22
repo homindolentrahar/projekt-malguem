@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"malguem/cmd"
 	"malguem/model"
+	"malguem/utils"
 	"os"
 	"path/filepath"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -22,109 +22,83 @@ var initCommand = &cobra.Command{
 	Short: "Init malguem",
 	Long:  "Init malguem in the project to use the templates",
 	Run: func(cmd *cobra.Command, args []string) {
-		malguemFile := "malguem.yaml"
-
-		file, error := os.Create(malguemFile)
-		if error != nil {
-			panic(error)
-		}
+		file, err := os.Create("malguem.yaml")
+		utils.HandleErrorExit(err)
 		defer file.Close()
 
-		wd, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		wdName := filepath.Base(wd)
+		currentDir, err := utils.GetCurrentDir()
+		utils.HandleErrorExit(err)
 
 		malguemConfig := model.MalguemConfig{
-			Name: wdName,
+			Name: currentDir,
 			Templates: map[string]model.MalguemTemplate{
 				"base_template": {
 					Path: "./base_template",
 				},
 			},
 		}
+		data, err := yaml.Marshal(&malguemConfig)
+		utils.HandleErrorExit(err)
 
-		encoder := yaml.NewEncoder(file)
-		err = encoder.Encode(malguemConfig)
-		if err != nil {
-			panic(err)
-		}
+		err = os.WriteFile(file.Name(), data, 0644)
+		utils.HandleErrorExit(err)
 
-		fmt.Printf("🌤️ %s project init success", wdName)
+		fmt.Printf("🌤️  %s project init success", currentDir)
 	},
 }
-var createCommad = &cobra.Command{
-	Use:   "create",
-	Short: "Create new template",
-	Long:  "Command to create new template",
-	Args:  cobra.MaximumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		var templateName string
-		var language string
 
-		// If user provide the template name by command args
+var makeCommand = &cobra.Command{
+	Use:   "make",
+	Short: "Make new template",
+	Long:  "Command to make new template",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(command *cobra.Command, args []string) {
+		var templateName string
+
+		// User provide the template name by command args
 		if len(args) > 0 {
 			templateName = args[0]
 		} else {
 			// Otherwise, prompt an input
-			templateName = prompInput("Enter template name")
+			templateName = cmd.PrompInput("Enter template name")
 		}
 
-		if len(args) > 1 {
-			language = args[1]
-		} else {
-			language = prompInput("Enter template laguage (.kt, .swift, .js)")
+		templateDir := filepath.Join("templates", templateName)
+
+		// Read malguem.yaml config file
+		malguemConfig, err := readMalguemConfig()
+		utils.HandleErrorExit(err)
+
+		if _, ok := malguemConfig.Templates[templateName]; !ok {
+			fmt.Printf("🌧️  %s template not found", templateName)
+			return
 		}
 
-		// Create a folder based on inputted template name
-		os.MkdirAll(fmt.Sprintf("%s/%s", "templates", templateName), os.ModePerm)
-
-		// Create a config file [malguem.yaml]
-		configPath := fmt.Sprintf("templates/%s", templateName)
-		configFile := "template.yaml"
-
-		file, err := os.Create(fmt.Sprintf("%s/%s", configPath, configFile))
-		if err != nil {
-			panic(err)
+		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+			fmt.Printf("🌧️  %s template not found", templateName)
+			return
 		}
-		defer file.Close()
-
-		content := fmt.Sprintf(`name: %s
-language: %s
-outputPath: `, templateName, language)
-
-		writer := bufio.NewWriter(file)
-		_, err = writer.WriteString(content)
-		if err != nil {
-			panic(err)
-		}
-
-		writer.Flush()
-
-		fmt.Printf("🌤️ %s template created\nHappy coding 🚀", templateName)
 	},
 }
 
 func main() {
 	rootCommand.AddCommand(initCommand)
-	rootCommand.AddCommand(createCommad)
+	rootCommand.AddCommand(cmd.CreateCommad)
+	rootCommand.AddCommand(makeCommand)
 	rootCommand.Execute()
 }
 
-func prompInput(prompt string) string {
-	p := tea.NewProgram(model.PromptInputStringModel{Prompt: prompt})
-	stringInput, err := p.Run()
-
+func readMalguemConfig() (*model.MalguemConfig, error) {
+	file, err := os.ReadFile("malguem.yaml")
 	if err != nil {
-		os.Exit(1)
+		return nil, err
 	}
 
-	value := stringInput.(model.PromptInputStringModel).Input
-
-	if value == "" {
-		return "default"
+	var malguemConfig model.MalguemConfig
+	err = yaml.Unmarshal(file, &malguemConfig)
+	if err != nil {
+		return nil, err
 	}
 
-	return value
+	return &malguemConfig, nil
 }

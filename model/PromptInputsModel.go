@@ -39,7 +39,7 @@ func (i PromptInputStringModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (i PromptInputStringModel) View() string {
 	if i.Done {
-		return "\n"
+		return fmt.Sprintf("%s: %s\n", i.Prompt, i.Input)
 	}
 
 	return fmt.Sprintf("%s: %s", i.Prompt, i.Input)
