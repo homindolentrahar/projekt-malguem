@@ -49,3 +49,42 @@ func CreateZipFile(source, target string) error {
 
 	return err
 }
+
+func UnzipFile(source, target string) error {
+	zipReader, err := zip.OpenReader(source)
+	HandleErrorExit(err)
+	defer zipReader.Close()
+
+	os.MkdirAll(target, os.ModePerm)
+
+	for _, file := range zipReader.File {
+		targetPath := filepath.Join(target, file.Name)
+
+		// If the entry is folder, then create
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(targetPath, os.ModePerm)
+			continue
+		}
+
+		err := extractZipFile(file, targetPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func extractZipFile(source *zip.File, target string) error {
+	srcFile, err := source.Open()
+	HandleErrorExit(err)
+	defer srcFile.Close()
+
+	destFile, err := os.Create(target)
+	HandleErrorExit(err)
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+
+	return err
+}
