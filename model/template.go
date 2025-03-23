@@ -3,7 +3,6 @@ package model
 type Template struct {
 	Name      string                      `yaml:"name"`
 	Language  string                      `yaml:"language"`
-	Output    string                      `yaml:"output"`
 	Variables map[string]TemplateVariable `yaml:"variables"`
 }
 

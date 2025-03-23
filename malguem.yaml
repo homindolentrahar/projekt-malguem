@@ -2,7 +2,10 @@ name: Malguem
 templates:
   nyang:
     path: templates/nyang
+    output: ./nyangnyeongnyongnyang
   nyeong:
     path: templates/nyeong
+    output: ./nyeong
   nyong:
     path: templates/nyong
+    output: ./nyong

@@ -83,7 +83,6 @@ var CreateCommad = &cobra.Command{
 		templateConfig := model.Template{
 			Name:     templateName,
 			Language: language,
-			Output:   "./",
 			Variables: map[string]model.TemplateVariable{
 				"name": {
 					Type:    "string",
@@ -128,18 +127,19 @@ var GetCommand = &cobra.Command{
 		for templateName, templateInfo := range malguemConfig.Templates {
 			packagePath := filepath.Join("packages", templateName+".zip")
 
+			if _, err := os.Stat(templateInfo.Path); os.IsNotExist(err) {
+				stdlog.Printf("❌ Template not found: %s. Try to make template first using `malguem create`\n", templateName)
+				continue
+			}
+
 			os.MkdirAll(filepath.Dir(packagePath), os.ModePerm)
 
-			if _, err := os.Stat(packagePath); os.IsNotExist(err) {
-				stdlog.Printf("Package is missing: %s. Getting package...", templateName)
-
-				time.Sleep(time.Second * 1)
-				// Zip or package the template from /templates folder
-				err := utils.CreateZipFile(templateInfo.Path, packagePath)
-				if err != nil {
-					stdlog.Printf("❌ Error packaging %s: %v\n", templateName, err)
-					continue
-				}
+			time.Sleep(time.Second * 1)
+			// Zip or package the template from /templates folder
+			err := utils.CreateZipFile(templateInfo.Path, packagePath)
+			if err != nil {
+				stdlog.Printf("❌ Error packaging template %s: %v\n", templateName, err)
+				continue
 			}
 
 			templateNames = append(templateNames, templateName)
@@ -169,7 +169,7 @@ var MakeCommand = &cobra.Command{
 			templateName = PrompInput("Enter template name")
 		}
 
-		templateDir := filepath.Join("templates", templateName)
+		stdlog.SetFlags(0)
 
 		// Read malguem.yaml config file
 		malguemConfig, err := utils.ReadMalguemConfig()
@@ -180,9 +180,16 @@ var MakeCommand = &cobra.Command{
 			return
 		}
 
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			fmt.Printf("🌧️  %s template not found", templateName)
+		template := malguemConfig.Templates[templateName]
+		packagesPath := filepath.Join("packages", templateName+".zip")
+
+		if _, err := os.Stat(packagesPath); os.IsNotExist(err) {
+			stdlog.Printf("🌧️  %s template is missing. Try run `malguem get` or check template registration in `malguem.yaml` file\n", templateName)
 			return
 		}
+
+		// Output the template
+		err = utils.UnzipFile(packagesPath, template.Output)
+		utils.HandleErrorExit(err)
 	},
 }

@@ -6,6 +6,7 @@ type MalguemConfig struct {
 }
 
 type MalguemTemplate struct {
-	Path string `yaml:"path,omitempty"`
-	Url  string `yaml:"url,omitempty"`
+	Path   string `yaml:"path,omitempty"`
+	Url    string `yaml:"url,omitempty"`
+	Output string `yaml:"output,omitempty"`
 }
