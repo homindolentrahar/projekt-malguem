@@ -7,6 +7,7 @@ import (
 	"malguem/utils"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -180,16 +181,47 @@ var MakeCommand = &cobra.Command{
 			return
 		}
 
-		template := malguemConfig.Templates[templateName]
-		packagesPath := filepath.Join("packages", templateName+".zip")
+		// Read template config file on each template
+		templateItem := malguemConfig.Templates[templateName]
+		// Read output path of the template
+		outputPath := templateItem.Output
 
-		if _, err := os.Stat(packagesPath); os.IsNotExist(err) {
-			stdlog.Printf("🌧️  %s template is missing. Try run `malguem get` or check template registration in `malguem.yaml` file\n", templateName)
-			return
+		// Ensure output path directory exists
+		os.MkdirAll(outputPath, os.ModePerm)
+
+		// Read the template config `template.yaml`
+		templateConfigPath := filepath.Join(templateItem.Path, "template.yaml")
+		templateConfig, err := utils.ReadTemplate(templateConfigPath)
+		utils.HandleErrorExit(err)
+
+		// Read template variables
+		var inputData = make(map[string]any)
+		for key, _ := range templateConfig.Variables {
+			// Request user input
+			variable := templateConfig.Variables[key]
+			inputPrompt := PrompInput(fmt.Sprintf("%s (%v)", variable.Prompt, variable.Default))
+
+			if inputPrompt == "" {
+				inputData[key] = variable.Default
+			} else {
+				inputData[key] = inputPrompt
+			}
 		}
 
-		// Output the template
-		err = utils.UnzipFile(packagesPath, template.Output)
+		// Render template
+		templateFiles, err := filepath.Glob(filepath.Join(templateItem.Path, "*.tmpl"))
 		utils.HandleErrorExit(err)
+
+		// Iterate thro all templates/%s/*.tmpl files
+		for _, file := range templateFiles {
+			// Define the output path + generated file
+			outputFile := filepath.Join(outputPath, strings.TrimSuffix(filepath.Base(file), ".tmpl"))
+
+			// Render the template and writing file to output path
+			err := utils.ExecuteTemplate(file, outputFile, inputData)
+			utils.HandleErrorExit(err)
+
+			fmt.Println(outputFile)
+		}
 	},
 }

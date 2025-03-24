@@ -7,6 +7,7 @@ type Template struct {
 }
 
 type TemplateVariable struct {
-	Type    any `yaml:"type"`
-	Default any `yaml:"default"`
+	Type    any    `yaml:"type"`
+	Prompt  string `yaml:"prompt"`
+	Default any    `yaml:"default"`
 }

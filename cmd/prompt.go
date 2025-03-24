@@ -18,7 +18,7 @@ func PrompInput(prompt string) string {
 	value := stringInput.(model.PromptInputStringModel).Input
 
 	if value == "" {
-		return "default"
+		return ""
 	}
 
 	return value

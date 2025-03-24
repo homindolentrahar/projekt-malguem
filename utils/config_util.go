@@ -26,3 +26,19 @@ func ReadMalguemConfig(configFile ...string) (*model.MalguemConfig, error) {
 
 	return &malguemConfig, nil
 }
+
+func ReadTemplate(path string) (*model.Template, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var template model.Template
+	err = yaml.Unmarshal(file, &template)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &template, err
+}
