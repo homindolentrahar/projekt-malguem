@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	stdlog "log"
 	"malguem/model"
 	"malguem/utils"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -208,20 +208,21 @@ var MakeCommand = &cobra.Command{
 			}
 		}
 
-		// Render template
-		templateFiles, err := filepath.Glob(filepath.Join(templateItem.Path, "*.tmpl"))
-		utils.HandleErrorExit(err)
+		err = filepath.Walk(templateItem.Path, func(path string, info fs.FileInfo, err error) error {
+			utils.HandleErrorReturn(err)
 
-		// Iterate thro all templates/%s/*.tmpl files
-		for _, file := range templateFiles {
-			// Define the output path + generated file
-			outputFile := filepath.Join(outputPath, strings.TrimSuffix(filepath.Base(file), ".tmpl"))
+			// Ignore directories and `template.yaml` file
+			if info.IsDir() || filepath.Base(path) == "template.yaml" {
+				return nil
+			}
+
+			outputFile := filepath.Join(outputPath, filepath.Base(path))
 
 			// Render the template and writing file to output path
-			err := utils.ExecuteTemplate(file, outputFile, inputData)
-			utils.HandleErrorExit(err)
+			err = utils.ExecuteTemplate(path, outputFile, inputData)
+			utils.HandleErrorReturn(err)
 
-			fmt.Println(outputFile)
-		}
+			return nil
+		})
 	},
 }

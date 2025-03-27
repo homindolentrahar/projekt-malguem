@@ -6,17 +6,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type PromptInputStringModel struct {
+type PrompInput struct {
 	Prompt string
 	Input  string
 	Done   bool
 }
 
-func (i PromptInputStringModel) Init() tea.Cmd {
+func (i PrompInput) Init() tea.Cmd {
 	return nil
 }
 
-func (i PromptInputStringModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (i PrompInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -37,7 +37,7 @@ func (i PromptInputStringModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return i, nil
 }
 
-func (i PromptInputStringModel) View() string {
+func (i PrompInput) View() string {
 	if i.Done {
 		return fmt.Sprintf("%s: %s\n", i.Prompt, i.Input)
 	}

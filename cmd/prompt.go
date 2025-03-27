@@ -8,14 +8,14 @@ import (
 )
 
 func PrompInput(prompt string) string {
-	p := tea.NewProgram(model.PromptInputStringModel{Prompt: prompt})
+	p := tea.NewProgram(model.PrompInput{Prompt: prompt})
 	stringInput, err := p.Run()
 
 	if err != nil {
 		os.Exit(1)
 	}
 
-	value := stringInput.(model.PromptInputStringModel).Input
+	value := stringInput.(model.PrompInput).Input
 
 	if value == "" {
 		return ""
