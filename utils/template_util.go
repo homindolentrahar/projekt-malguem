@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/cbroglie/mustache"
 )
@@ -34,18 +35,7 @@ func renderTemplate(template string, data map[string]string) (string, error) {
 			return match
 		}
 
-		switch format {
-		case "pascal_case":
-			return ToPascalCase(value)
-		case "camel_case":
-			return ToCamelCase(value)
-		case "snake_case":
-			return ToSnakeCase(value)
-		case "kebab_case":
-			return ToKebabCase(value)
-		default:
-			return value
-		}
+		return applyFormat(format, value)
 	})
 
 	result, err := mustache.Render(preprocessedTemplate, data)
@@ -54,6 +44,27 @@ func renderTemplate(template string, data map[string]string) (string, error) {
 	}
 
 	return result, nil
+}
+
+func applyFormat(format, value string) string {
+	switch format {
+	case "pascal_case":
+		return ToPascalCase(value)
+	case "camel_case":
+		return ToCamelCase(value)
+	case "snake_case":
+		return ToSnakeCase(value)
+	case "kebab_case":
+		return ToKebabCase(value)
+	case "uppercase":
+		return strings.ToUpper(value)
+	case "lowercase":
+		return strings.ToLower(value)
+	case "titlecase":
+		return strings.Title(value)
+	default:
+		return value
+	}
 }
 
 func ExecuteTemplate(source, target string, data map[string]string) error {
