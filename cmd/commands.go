@@ -195,14 +195,14 @@ var MakeCommand = &cobra.Command{
 		utils.HandleErrorExit(err)
 
 		// Read template variables
-		var inputData = make(map[string]any)
+		var inputData = make(map[string]string)
 		for key, _ := range templateConfig.Variables {
 			// Request user input
 			variable := templateConfig.Variables[key]
 			inputPrompt := PrompInput(fmt.Sprintf("%s (%v)", variable.Prompt, variable.Default))
 
 			if inputPrompt == "" {
-				inputData[key] = variable.Default
+				inputData[key] = variable.Default.(string)
 			} else {
 				inputData[key] = inputPrompt
 			}
