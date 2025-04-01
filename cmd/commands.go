@@ -6,6 +6,7 @@ import (
 	stdlog "log"
 	"malguem/model"
 	"malguem/utils"
+	"malguem/utils/git/github"
 	"os"
 	"path/filepath"
 	"time"
@@ -224,5 +225,26 @@ var MakeCommand = &cobra.Command{
 
 			return nil
 		})
+	},
+}
+
+var DownloadCommand = &cobra.Command{
+	Use:   "download",
+	Short: "Download template from Github",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Read malguem.yaml config file
+		malguemConfig, err := utils.ReadMalguemConfig()
+		utils.HandleErrorExit(err)
+
+		templateName := "nyang"
+		malguemItem := malguemConfig.Templates[templateName]
+
+		githubUrl := malguemItem.Github.URL
+		githubPath := malguemItem.Github.Path
+		githubRef := malguemItem.Github.Ref
+
+		outputPath := filepath.Join("templates", malguemItem.Output)
+
+		github.CloneSubdir(githubUrl, githubRef, githubPath, outputPath)
 	},
 }

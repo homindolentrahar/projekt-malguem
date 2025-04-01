@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
 	"malguem/cmd"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCommand = &cobra.Command{
@@ -16,5 +17,6 @@ func main() {
 	rootCommand.AddCommand(cmd.CreateCommad)
 	rootCommand.AddCommand(cmd.MakeCommand)
 	rootCommand.AddCommand(cmd.GetCommand)
+	rootCommand.AddCommand(cmd.DownloadCommand)
 	rootCommand.Execute()
 }

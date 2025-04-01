@@ -1,8 +1,11 @@
 name: Malguem
 templates:
   nyang:
-    path: templates/nyang
-    output: ./nyang
+    github:
+      url: https://github.com/homindolentrahar/indcana
+      ref: master
+      path: bricks/indcana_bloc
+    output: ./indcana_bloc
   nyeong:
     path: templates/nyeong
     output: ./nyeong

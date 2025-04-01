@@ -2,9 +2,13 @@ package utils
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 func CreateZipFile(source, target string) error {
@@ -75,7 +79,63 @@ func UnzipFile(source, target string) error {
 	return nil
 }
 
+func UnzipSubdir(source, subdir, target string) error {
+	zipReader, err := zip.OpenReader(source)
+	HandleErrorExit(err)
+	defer zipReader.Close()
+
+	os.MkdirAll(target, os.ModePerm)
+
+	// Normalize the subdir path
+	subdir = filepath.ToSlash(subdir)
+
+	// Add the trailing slash if not exist
+	if !strings.HasSuffix(subdir, "/") {
+		subdir += "/"
+	}
+
+	// Find the root folder
+	var rootFolder string
+	for _, file := range zipReader.File {
+		normalizedPath := filepath.ToSlash(file.Name)
+		parts := strings.SplitN(normalizedPath, "/", 2)
+
+		if len(parts) > 1 {
+			rootFolder = parts[0]
+			break
+		}
+	}
+	log.Debug().Msgf("Root: %s", rootFolder)
+
+	// Extract the zip file
+	targetDir := fmt.Sprintf("%s/%s", rootFolder, subdir)
+	log.Debug().Msgf("Target: %s", targetDir)
+	for _, file := range zipReader.File {
+		normalizedPath := filepath.ToSlash(file.Name)
+
+		if !strings.HasPrefix(normalizedPath, targetDir) {
+			continue
+		}
+
+		relativePath := strings.Trim(normalizedPath, targetDir)
+		targetPath := filepath.Join(target, subdir, filepath.FromSlash(relativePath))
+
+		// if the entry is folder, then make sure the folder is available
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(targetPath, os.ModePerm)
+			continue
+		}
+
+		err := extractZipFile(file, targetPath)
+		HandleErrorReturn(err)
+	}
+
+	return nil
+}
+
 func extractZipFile(source *zip.File, target string) error {
+	os.MkdirAll(filepath.Dir(target), os.ModePerm)
+
 	srcFile, err := source.Open()
 	HandleErrorExit(err)
 	defer srcFile.Close()
