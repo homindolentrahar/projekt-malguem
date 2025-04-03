@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	stdlog "log"
 	"malguem/model"
 	"malguem/utils"
-	"malguem/utils/git/github"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,11 +25,12 @@ var InitCommand = &cobra.Command{
 		currentDir, err := utils.GetCurrentDir()
 		utils.HandleErrorExit(err)
 
+		path := "./base_template"
 		malguemConfig := model.MalguemConfig{
 			Name: currentDir,
 			Templates: map[string]model.MalguemTemplate{
 				"base_template": {
-					Path: "./base_template",
+					Path: &path,
 				},
 			},
 		}
@@ -127,30 +126,25 @@ var GetCommand = &cobra.Command{
 		time.Sleep(time.Second * 1)
 		var templateNames []string
 		for templateName, templateInfo := range malguemConfig.Templates {
-			packagePath := filepath.Join("packages", templateName+".zip")
-
-			if _, err := os.Stat(templateInfo.Path); os.IsNotExist(err) {
-				stdlog.Printf("❌ Template not found: %s. Try to make template first using `malguem create`\n", templateName)
-				continue
-			}
-
-			os.MkdirAll(filepath.Dir(packagePath), os.ModePerm)
-
-			time.Sleep(time.Second * 1)
-			// Zip or package the template from /templates folder
-			err := utils.CreateZipFile(templateInfo.Path, packagePath)
-			if err != nil {
-				stdlog.Printf("❌ Error packaging template %s: %v\n", templateName, err)
-				continue
-			}
-
 			templateNames = append(templateNames, templateName)
+
+			if templateInfo.Github != nil && templateInfo.Path != nil {
+				option := PromptChoice(fmt.Sprintf("Select source for `%s` template", templateName), []string{"Github", "Local"})
+
+				if option == "Github" {
+					fmt.Printf("🌤️  Downloading `%s` template from Github\n", templateName)
+				}
+			} else if templateInfo.Github != nil {
+				fmt.Printf("🌤️  Downloading `%s` template from Github...\n", templateName)
+			} else {
+				continue
+			}
 		}
 
-		fmt.Println("🌤️ Success get all templates")
+		fmt.Println("🌤️  Success get all templates")
 		fmt.Println("📦  Templates found: ")
 		for _, name := range templateNames {
-			fmt.Printf("  - %s\n", name)
+			fmt.Printf("✅  %s\n", name)
 		}
 	},
 }
@@ -190,61 +184,28 @@ var MakeCommand = &cobra.Command{
 		// Ensure output path directory exists
 		os.MkdirAll(outputPath, os.ModePerm)
 
-		// Read the template config `template.yaml`
-		templateConfigPath := filepath.Join(templateItem.Path, "template.yaml")
-		templateConfig, err := utils.ReadTemplate(templateConfigPath)
+		err = RenderTemplateLocal(templateName, *templateItem.Path, outputPath)
 		utils.HandleErrorExit(err)
-
-		// Read template variables
-		var inputData = make(map[string]string)
-		for key, _ := range templateConfig.Variables {
-			// Request user input
-			variable := templateConfig.Variables[key]
-			inputPrompt := PrompInput(fmt.Sprintf("%s (%v)", variable.Prompt, variable.Default))
-
-			if inputPrompt == "" {
-				inputData[key] = variable.Default.(string)
-			} else {
-				inputData[key] = inputPrompt
-			}
-		}
-
-		err = filepath.Walk(templateItem.Path, func(path string, info fs.FileInfo, err error) error {
-			utils.HandleErrorReturn(err)
-
-			// Ignore directories and `template.yaml` file
-			if info.IsDir() || filepath.Base(path) == "template.yaml" {
-				return nil
-			}
-
-			outputFile := filepath.Join(outputPath, filepath.Base(path))
-
-			// Render the template and writing file to output path
-			err = utils.ExecuteTemplate(path, outputFile, inputData)
-			utils.HandleErrorReturn(err)
-
-			return nil
-		})
 	},
 }
 
-var DownloadCommand = &cobra.Command{
-	Use:   "download",
-	Short: "Download template from Github",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Read malguem.yaml config file
-		malguemConfig, err := utils.ReadMalguemConfig()
-		utils.HandleErrorExit(err)
+// var DownloadCommand = &cobra.Command{
+// 	Use:   "download",
+// 	Short: "Download template from Github",
+// 	Run: func(cmd *cobra.Command, args []string) {
+// 		// Read malguem.yaml config file
+// 		malguemConfig, err := utils.ReadMalguemConfig()
+// 		utils.HandleErrorExit(err)
 
-		templateName := "nyang"
-		malguemItem := malguemConfig.Templates[templateName]
+// 		templateName := "nyang"
+// 		malguemItem := malguemConfig.Templates[templateName]
 
-		githubUrl := malguemItem.Github.URL
-		githubPath := malguemItem.Github.Path
-		githubRef := malguemItem.Github.Ref
+// 		githubUrl := malguemItem.Github.URL
+// 		githubPath := malguemItem.Github.Path
+// 		githubRef := malguemItem.Github.Ref
 
-		outputPath := filepath.Join("templates", malguemItem.Output)
+// 		outputPath := filepath.Join("templates", malguemItem.Output)
 
-		github.CloneSubdir(githubUrl, githubRef, githubPath, outputPath)
-	},
-}
+// 		github.CloneSubdir(githubUrl, githubRef, githubPath, outputPath)
+// 	},
+// }

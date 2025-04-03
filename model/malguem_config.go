@@ -6,9 +6,9 @@ type MalguemConfig struct {
 }
 
 type MalguemTemplate struct {
-	Path   string       `yaml:"path,omitempty"`
-	Github GithubSource `yaml:"github,omitempty"`
-	Output string       `yaml:"output,omitempty"`
+	Path   *string       `yaml:"path,omitempty"`
+	Github *GithubSource `yaml:"github,omitempty"`
+	Output string        `yaml:"output,omitempty"`
 }
 
 type GithubSource struct {

@@ -17,6 +17,5 @@ func main() {
 	rootCommand.AddCommand(cmd.CreateCommad)
 	rootCommand.AddCommand(cmd.MakeCommand)
 	rootCommand.AddCommand(cmd.GetCommand)
-	rootCommand.AddCommand(cmd.DownloadCommand)
 	rootCommand.Execute()
 }
