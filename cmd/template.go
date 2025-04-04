@@ -4,15 +4,47 @@ import (
 	"fmt"
 	"io/fs"
 	"malguem/utils"
+	"malguem/utils/git/github"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/cbroglie/mustache"
+	"github.com/rs/zerolog/log"
 )
 
+var homeDir, err = os.UserHomeDir()
+
 var sectionPattern = regexp.MustCompile(`{{#([\w]+)}}([\w]+){{/[\w]+}}`)
+
+func DownloadTemplate(template, url, ref, subDir string) error {
+	homeDir, err := os.UserHomeDir()
+	utils.HandleErrorReturn(err)
+
+	cacheDir := filepath.Join(homeDir, ".malguem", "cache")
+	cachePath := filepath.Join(cacheDir, template)
+
+	// Make sure the cache directory exists
+	os.MkdirAll(cacheDir, os.ModePerm)
+
+	// Check if the template is already cached
+	if _, err := os.Stat(cachePath); os.IsExist(err) {
+		fmt.Printf("Template %s already exists in cache\n", template)
+		return nil
+	}
+
+	// Download template and store it in cache
+	tarballUrl := strings.Replace(url, "github.com", "codeload.github.com", 1) + "/tar.gz/" + ref
+	err = github.CloneRepo(tarballUrl, cachePath, subDir)
+
+	if err != nil {
+		log.Error().Msg(err.Error())
+		return err
+	}
+
+	return nil
+}
 
 func RenderTemplateLocal(template, path, output string) error {
 	// Read template config `template.yaml`

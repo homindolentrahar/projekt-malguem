@@ -128,23 +128,22 @@ var GetCommand = &cobra.Command{
 		for templateName, templateInfo := range malguemConfig.Templates {
 			templateNames = append(templateNames, templateName)
 
-			if templateInfo.Github != nil && templateInfo.Path != nil {
-				option := PromptChoice(fmt.Sprintf("Select source for `%s` template", templateName), []string{"Github", "Local"})
-
-				if option == "Github" {
-					fmt.Printf("🌤️  Downloading `%s` template from Github\n", templateName)
-				}
-			} else if templateInfo.Github != nil {
-				fmt.Printf("🌤️  Downloading `%s` template from Github...\n", templateName)
-			} else {
+			if templateInfo.Github == nil {
 				continue
 			}
+
+			err := DownloadTemplate(templateName, templateInfo.Github.URL, templateInfo.Github.Ref, templateInfo.Github.Path)
+			if err != nil {
+				fmt.Printf("🌧️  Failed to download %s template from Github: %v\n", templateName, err)
+				continue
+			}
+
+			fmt.Printf("🌤️  Success getting `%s` template\n", templateName)
 		}
 
-		fmt.Println("🌤️  Success get all templates")
 		fmt.Println("📦  Templates found: ")
 		for _, name := range templateNames {
-			fmt.Printf("✅  %s\n", name)
+			fmt.Printf("✅  `%s`\n", name)
 		}
 	},
 }
@@ -188,24 +187,3 @@ var MakeCommand = &cobra.Command{
 		utils.HandleErrorExit(err)
 	},
 }
-
-// var DownloadCommand = &cobra.Command{
-// 	Use:   "download",
-// 	Short: "Download template from Github",
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		// Read malguem.yaml config file
-// 		malguemConfig, err := utils.ReadMalguemConfig()
-// 		utils.HandleErrorExit(err)
-
-// 		templateName := "nyang"
-// 		malguemItem := malguemConfig.Templates[templateName]
-
-// 		githubUrl := malguemItem.Github.URL
-// 		githubPath := malguemItem.Github.Path
-// 		githubRef := malguemItem.Github.Ref
-
-// 		outputPath := filepath.Join("templates", malguemItem.Output)
-
-// 		github.CloneSubdir(githubUrl, githubRef, githubPath, outputPath)
-// 	},
-// }

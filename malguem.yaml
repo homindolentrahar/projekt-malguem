@@ -1,7 +1,6 @@
 name: Malguem
 templates:
   nyang:
-    path: templates/nyang
     github:
       url: https://github.com/homindolentrahar/indcana
       ref: master

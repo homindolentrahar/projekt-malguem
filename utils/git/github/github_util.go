@@ -3,10 +3,27 @@ package github
 import (
 	"fmt"
 	"malguem/utils"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
+
+func CloneRepo(url, target, subdir string) error {
+	response, err := http.Get(url)
+	utils.HandleErrorReturn(err)
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to fetch the repository: %s", response.Status)
+	}
+
+	// Make sure the target directory exists
+	os.MkdirAll(target, os.ModePerm)
+
+	// Extract the subdirectory from the tarball
+	return utils.ExtractSubdirectory(response.Body, target, subdir)
+}
 
 func CloneSubdir(url, branch, path, output string) error {
 	tempDir := "temp"
