@@ -18,7 +18,7 @@ var homeDir, err = os.UserHomeDir()
 
 var sectionPattern = regexp.MustCompile(`{{#([\w]+)}}([\w]+){{/[\w]+}}`)
 
-func DownloadTemplate(template, url, ref, subDir string) error {
+func DownloadTemplate(template, url, ref, subDir string) (error, string) {
 	homeDir, err := os.UserHomeDir()
 	utils.HandleErrorReturn(err)
 
@@ -29,9 +29,8 @@ func DownloadTemplate(template, url, ref, subDir string) error {
 	os.MkdirAll(cacheDir, os.ModePerm)
 
 	// Check if the template is already cached
-	if _, err := os.Stat(cachePath); os.IsExist(err) {
-		fmt.Printf("Template %s already exists in cache\n", template)
-		return nil
+	if _, err := os.Stat(cachePath); err == nil {
+		return fmt.Errorf("Template `%s` already exists in cache\n", template), cachePath
 	}
 
 	// Download template and store it in cache
@@ -40,13 +39,13 @@ func DownloadTemplate(template, url, ref, subDir string) error {
 
 	if err != nil {
 		log.Error().Msg(err.Error())
-		return err
+		return err, ""
 	}
 
-	return nil
+	return nil, cachePath
 }
 
-func RenderTemplateLocal(template, path, output string) error {
+func RenderTemplate(template, path, output string) error {
 	// Read template config `template.yaml`
 	templateConfigPath := filepath.Join(path, "template.yaml")
 	templateConfig, err := utils.ReadTemplate(templateConfigPath)
@@ -75,14 +74,14 @@ func RenderTemplateLocal(template, path, output string) error {
 		}
 
 		outputPath := filepath.Join(output, filepath.Base(path))
-		err = renderTemplate(path, outputPath, inputData)
+		err = renderMustache(path, outputPath, inputData)
 		utils.HandleErrorExit(err)
 
 		return nil
 	})
 }
 
-func renderTemplate(source, target string, data map[string]string) error {
+func renderMustache(source, target string, data map[string]string) error {
 	file, err := os.ReadFile(source)
 	utils.HandleErrorReturn(err)
 

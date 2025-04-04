@@ -7,6 +7,7 @@ import (
 	"malguem/utils"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,7 +31,7 @@ var InitCommand = &cobra.Command{
 			Name: currentDir,
 			Templates: map[string]model.MalguemTemplate{
 				"base_template": {
-					Path: &path,
+					Path: path,
 				},
 			},
 		}
@@ -132,7 +133,7 @@ var GetCommand = &cobra.Command{
 				continue
 			}
 
-			err := DownloadTemplate(templateName, templateInfo.Github.URL, templateInfo.Github.Ref, templateInfo.Github.Path)
+			err, _ := DownloadTemplate(templateName, templateInfo.Github.URL, templateInfo.Github.Ref, templateInfo.Github.Path)
 			if err != nil {
 				fmt.Printf("🌧️  Failed to download %s template from Github: %v\n", templateName, err)
 				continue
@@ -183,7 +184,28 @@ var MakeCommand = &cobra.Command{
 		// Ensure output path directory exists
 		os.MkdirAll(outputPath, os.ModePerm)
 
-		err = RenderTemplateLocal(templateName, *templateItem.Path, outputPath)
+		// Define source path of the template
+		sourcePath := templateItem.Path
+
+		if templateItem.Github != nil {
+			// Download template and store it in cache
+			err, cachePath := DownloadTemplate(templateName, templateItem.Github.URL, templateItem.Github.Ref, templateItem.Github.Path)
+			if err != nil {
+				if strings.Contains(err.Error(), "already exists") {
+					err = RenderTemplate(templateName, cachePath, outputPath)
+					utils.HandleErrorExit(err)
+
+					return
+				}
+
+				fmt.Printf("🌧️  Failed to download %s template from Github: %v\n", templateName, err)
+				return
+			}
+
+			sourcePath = cachePath
+		}
+
+		err = RenderTemplate(templateName, sourcePath, outputPath)
 		utils.HandleErrorExit(err)
 	},
 }
