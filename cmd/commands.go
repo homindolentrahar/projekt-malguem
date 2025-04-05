@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	stdlog "log"
 	"malguem/model"
 	"malguem/utils"
@@ -150,9 +151,9 @@ var GetCommand = &cobra.Command{
 }
 
 var MakeCommand = &cobra.Command{
-	Use:   "make",
-	Short: "Make new template",
-	Long:  "Command to make new template",
+	Use:   "gen",
+	Short: "Generate template",
+	Long:  "Command to generate template from both local and remote source",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(command *cobra.Command, args []string) {
 		var templateName string
@@ -204,5 +205,45 @@ var MakeCommand = &cobra.Command{
 
 		err = RenderTemplate(templateName, sourcePath, outputPath)
 		utils.HandleErrorExit(err)
+	},
+}
+
+var ListCommand = &cobra.Command{
+	Use:   "list",
+	Args:  cobra.NoArgs,
+	Short: "List all templates",
+	Long:  "List all templates available in the local machine",
+	Run: func(command *cobra.Command, args []string) {
+		// Get the cache dir
+		cacheDir := utils.GetCacheDir()
+		if cacheDir == "" {
+			// Create the cache dir first
+			os.MkdirAll(cacheDir, os.ModePerm)
+		}
+
+		var templates []string
+		// Iterate over templates inside the cache dir
+		filepath.Walk(cacheDir, func(path string, info fs.FileInfo, err error) error {
+			// Check if the file is a directory
+			if info.IsDir() {
+				// Ensure that only list the valid template with `template.yaml` file present
+				templateConfig := filepath.Join(path, "template.yaml")
+
+				if _, err := os.Stat(templateConfig); err == nil {
+					relativePath, _ := filepath.Rel(cacheDir, path)
+
+					templates = append(templates, relativePath)
+
+					return filepath.SkipDir
+				}
+			}
+
+			return nil
+		})
+
+		fmt.Printf("🌤️  %d Templates found\n", len(templates))
+		for _, template := range templates {
+			fmt.Printf("   - %s\n", template)
+		}
 	},
 }

@@ -7,6 +7,15 @@ import (
 	"path/filepath"
 )
 
+func GetCacheDir() string {
+	homeDir, err := GetUserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(homeDir, ".malguem", "cache")
+}
+
 func GetUserHomeDir() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
