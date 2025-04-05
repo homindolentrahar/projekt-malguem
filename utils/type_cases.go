@@ -70,3 +70,13 @@ func splitWords(value string) []string {
 
 	return words
 }
+
+func ToTitleCase(input string) string {
+	words := strings.Fields(input)
+
+	for i, word := range words {
+		words[i] = strings.ToUpper(string(word[0])) + strings.ToLower(word[1:])
+	}
+
+	return strings.Join(words, " ")
+}

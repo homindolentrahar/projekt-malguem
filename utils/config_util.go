@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"gopkg.in/yaml.v3"
 	"malguem/model"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 func ReadMalguemConfig(configFile ...string) (*model.MalguemConfig, error) {
@@ -27,13 +28,13 @@ func ReadMalguemConfig(configFile ...string) (*model.MalguemConfig, error) {
 	return &malguemConfig, nil
 }
 
-func ReadTemplate(path string) (*model.Template, error) {
+func ReadTemplate(path string) (*model.TemplateConfig, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var template model.Template
+	var template model.TemplateConfig
 	err = yaml.Unmarshal(file, &template)
 
 	if err != nil {

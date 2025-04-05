@@ -7,6 +7,15 @@ import (
 	"path/filepath"
 )
 
+func GetUserHomeDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return homeDir, nil
+}
+
 func GetCurrentDir() (string, error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {

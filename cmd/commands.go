@@ -82,10 +82,10 @@ var CreateCommad = &cobra.Command{
 		defer file.Close()
 
 		// Write the content to the config file
-		templateConfig := model.Template{
+		templateConfig := model.TemplateConfig{
 			Name:     templateName,
 			Language: language,
-			Variables: map[string]model.TemplateVariable{
+			Variables: map[string]model.TemplateConfigVariable{
 				"name": {
 					Type:    "string",
 					Default: "default",
@@ -133,7 +133,7 @@ var GetCommand = &cobra.Command{
 				continue
 			}
 
-			err, _ := DownloadTemplate(templateName, templateInfo.Github.URL, templateInfo.Github.Ref, templateInfo.Github.Path)
+			_, err := DownloadTemplate(templateName, templateInfo.Github.URL, templateInfo.Github.Ref, templateInfo.Github.Path)
 			if err != nil {
 				fmt.Printf("🌧️  Failed to download %s template from Github: %v\n", templateName, err)
 				continue
@@ -181,15 +181,12 @@ var MakeCommand = &cobra.Command{
 		// Read output path of the template
 		outputPath := templateItem.Output
 
-		// Ensure output path directory exists
-		os.MkdirAll(outputPath, os.ModePerm)
-
 		// Define source path of the template
 		sourcePath := templateItem.Path
 
 		if templateItem.Github != nil {
 			// Download template and store it in cache
-			err, cachePath := DownloadTemplate(templateName, templateItem.Github.URL, templateItem.Github.Ref, templateItem.Github.Path)
+			cachePath, err := DownloadTemplate(templateName, templateItem.Github.URL, templateItem.Github.Ref, templateItem.Github.Path)
 			if err != nil {
 				if strings.Contains(err.Error(), "already exists") {
 					err = RenderTemplate(templateName, cachePath, outputPath)

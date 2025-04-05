@@ -6,9 +6,6 @@ templates:
       ref: master
       path: bricks/indcana_bloc
     output: ./nyang
-  nyeong:
-    path: templates/nyeong
-    output: ./nyeong
   nyong:
     path: templates/nyong
     output: ./nyong

@@ -14,11 +14,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var homeDir, err = os.UserHomeDir()
-
 var sectionPattern = regexp.MustCompile(`{{#([\w]+)}}([\w]+){{/[\w]+}}`)
 
-func DownloadTemplate(template, url, ref, subDir string) (error, string) {
+func DownloadTemplate(template, url, ref, subDir string) (string, error) {
 	homeDir, err := os.UserHomeDir()
 	utils.HandleErrorReturn(err)
 
@@ -30,7 +28,7 @@ func DownloadTemplate(template, url, ref, subDir string) (error, string) {
 
 	// Check if the template is already cached
 	if _, err := os.Stat(cachePath); err == nil {
-		return fmt.Errorf("Template `%s` already exists in cache\n", template), cachePath
+		return cachePath, fmt.Errorf("template `%s` already exists in cache", template)
 	}
 
 	// Download template and store it in cache
@@ -39,10 +37,10 @@ func DownloadTemplate(template, url, ref, subDir string) (error, string) {
 
 	if err != nil {
 		log.Error().Msg(err.Error())
-		return err, ""
+		return "", err
 	}
 
-	return nil, cachePath
+	return cachePath, nil
 }
 
 func RenderTemplate(template, path, output string) error {
@@ -65,28 +63,67 @@ func RenderTemplate(template, path, output string) error {
 		}
 	}
 
-	return filepath.Walk(path, func(path string, info fs.FileInfo, err error) error {
+	// Make sure the output directory exists
+	os.MkdirAll(output, os.ModePerm)
+
+	// Iterate over files and folders inside path
+	return filepath.Walk(path, func(pathFile string, info fs.FileInfo, err error) error {
 		utils.HandleErrorReturn(err)
 
-		// Ignore directories and `template.yaml` file
-		if info.IsDir() || filepath.Base(path) == "template.yaml" {
+		// Skip the `template.yaml` file
+		if filepath.Base(pathFile) == "template.yaml" {
 			return nil
 		}
 
-		outputPath := filepath.Join(output, filepath.Base(path))
-		err = renderMustache(path, outputPath, inputData)
+		// Render mustache in the path
+		processedPath, err := renderMustachePath(pathFile, inputData)
+		utils.HandleErrorExit(err)
+		// Remove the template prefix from the path
+		processedPath = strings.TrimPrefix(processedPath, path)
+
+		// Check if the `info` is a directory
+		// Then make sure the directory exists and continue to the next iteration
+		if info.IsDir() {
+			os.MkdirAll(filepath.Join(output, processedPath), os.ModePerm)
+
+			return nil
+		}
+
+		// Define output and render the mustache template inside content
+		outputPath := filepath.Join(output, processedPath)
+		err = renderMustacheContent(pathFile, outputPath, inputData)
 		utils.HandleErrorExit(err)
 
 		return nil
 	})
 }
 
-func renderMustache(source, target string, data map[string]string) error {
+func renderMustachePath(source string, data map[string]string) (string, error) {
+	preprocessedTemplate := preporcessTemplate(source, data)
+
+	result, err := mustache.Render(preprocessedTemplate, data)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+func renderMustacheContent(source, target string, data map[string]string) error {
 	file, err := os.ReadFile(source)
 	utils.HandleErrorReturn(err)
 
 	templateString := string(file)
-	preprocessedTemplate := sectionPattern.ReplaceAllStringFunc(templateString, func(match string) string {
+	preprocessedTemplate := preporcessTemplate(templateString, data)
+
+	result, err := mustache.Render(preprocessedTemplate, data)
+	utils.HandleErrorReturn(err)
+
+	return os.WriteFile(target, []byte(result), 0644)
+}
+
+func preporcessTemplate(templateString string, data map[string]string) string {
+	return sectionPattern.ReplaceAllStringFunc(templateString, func(match string) string {
 		// Extract format type and variable name
 		// {{format}} varName {{/format}}
 		//     1         2         3
@@ -106,11 +143,6 @@ func renderMustache(source, target string, data map[string]string) error {
 
 		return applyFormat(format, value)
 	})
-
-	result, err := mustache.Render(preprocessedTemplate, data)
-	utils.HandleErrorReturn(err)
-
-	return os.WriteFile(target, []byte(result), 0644)
 }
 
 func applyFormat(format, value string) string {
@@ -128,7 +160,7 @@ func applyFormat(format, value string) string {
 	case "lowercase":
 		return strings.ToLower(value)
 	case "titlecase":
-		return strings.Title(value)
+		return utils.ToTitleCase(value)
 	default:
 		return value
 	}
