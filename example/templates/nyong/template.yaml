@@ -1,0 +1,11 @@
+name: nyeong
+language: .swift
+variables:
+  name:
+    type: string
+    default: default
+    prompt: "Enter the name of the project"
+  feature:
+    type: string
+    default: default
+    prompt: "Enter the feature name"

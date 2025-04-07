@@ -15,6 +15,7 @@ import (
 )
 
 var sectionPattern = regexp.MustCompile(`{{#([\w]+)}}([\w]+){{/[\w]+}}`)
+var formatPattern = regexp.MustCompile(`{{\s*([\w]+)\s*}}`)
 
 func DownloadTemplate(template, url, ref, subDir string) (string, error) {
 	homeDir, err := os.UserHomeDir()
@@ -75,9 +76,25 @@ func RenderTemplate(template, path, output string) error {
 			return nil
 		}
 
-		// Render mustache in the path
-		processedPath, err := renderMustachePath(pathFile, inputData)
-		utils.HandleErrorExit(err)
+		processedPath := ""
+
+		// Render the mustache template in the path
+		if info.IsDir() {
+			processedPath = preprocessPath(pathFile, inputData, templateConfig.DirCase)
+		} else {
+			// Split the path into directory and file segments
+			dirSegment := filepath.Dir(pathFile)
+			fileSegment := filepath.Base(pathFile)
+
+			// Preprocess the directory and file segments respectively
+			dirPath := preprocessPath(dirSegment, inputData, templateConfig.DirCase)
+			filePath := preprocessPath(fileSegment, inputData, templateConfig.FileCase)
+			// Join the processed directory and file segments to get the full processed path
+			fullPath := filepath.Join(dirPath, filePath)
+
+			processedPath = fullPath
+		}
+
 		// Remove the template prefix from the path
 		processedPath = strings.TrimPrefix(processedPath, path)
 
@@ -98,23 +115,12 @@ func RenderTemplate(template, path, output string) error {
 	})
 }
 
-func renderMustachePath(source string, data map[string]string) (string, error) {
-	preprocessedTemplate := preporcessTemplate(source, data)
-
-	result, err := mustache.Render(preprocessedTemplate, data)
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
-}
-
 func renderMustacheContent(source, target string, data map[string]string) error {
 	file, err := os.ReadFile(source)
 	utils.HandleErrorReturn(err)
 
 	templateString := string(file)
-	preprocessedTemplate := preporcessTemplate(templateString, data)
+	preprocessedTemplate := preprocessTemplate(templateString, data)
 
 	result, err := mustache.Render(preprocessedTemplate, data)
 	utils.HandleErrorReturn(err)
@@ -122,7 +128,25 @@ func renderMustacheContent(source, target string, data map[string]string) error 
 	return os.WriteFile(target, []byte(result), 0644)
 }
 
-func preporcessTemplate(templateString string, data map[string]string) string {
+func preprocessPath(path string, data map[string]string, formatCase string) string {
+	return formatPattern.ReplaceAllStringFunc(path, func(match string) string {
+		variable := formatPattern.FindStringSubmatch(match)[1]
+
+		// Extrace value for variable
+		value, exists := data[variable]
+		if !exists {
+			return match
+		}
+
+		if formatCase == "" {
+			formatCase = "snake_case"
+		}
+
+		return applyFormat(formatCase, value)
+	})
+}
+
+func preprocessTemplate(templateString string, data map[string]string) string {
 	return sectionPattern.ReplaceAllStringFunc(templateString, func(match string) string {
 		// Extract format type and variable name
 		// {{format}} varName {{/format}}

@@ -1,0 +1,7 @@
+name: nyang
+language: .kt
+variables:
+  name:
+    type: string
+    prompt: Input nyang's name
+    default: General
